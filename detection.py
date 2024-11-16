@@ -98,6 +98,7 @@ while True:
         duration_list["duration"] = 0
         duration_list["present"] = present
         sending_state = True
+        last_detecting_time = time.time()
 
         
     if sending_state is True:
