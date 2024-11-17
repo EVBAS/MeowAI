@@ -52,7 +52,7 @@ def predict_and_detect(chosen_model, img, classes=[], conf=0.8, counts = 0,verbo
                         
     return img, results, counts
 
-model = YOLO("Meow.pt")
+model = YOLO("yolov8l.pt")
 starting_time = None
 last_detecting_time = time.time()
 duration = None
@@ -65,12 +65,14 @@ present = False
 sending_state = False
 address = "http://42.2.115.185:8080"
 video = cv2.VideoCapture(0)
+object_frame = None
+
 while True:
     ret, frame = video.read()
     if not ret:
         break
 
-    frame, results, counts = predict_and_detect(model, frame, classes=[], conf=0.6,verbose=False)
+    new_frame, results, counts = predict_and_detect(model, frame, classes=[0], conf=0.6,verbose=False)
 
     if counts > 0:
         if present is False:
@@ -78,6 +80,7 @@ while True:
             duration = None
             present = True
             duration_list["present"] = present
+            object_frame = new_frame
 
     elif present is True:
         duration = time.time() - starting_time
@@ -86,28 +89,30 @@ while True:
             present = False
             duration_list["duration"] = 0
             duration_list["present"] = present
+            object_frame = new_frame
         else:
-            duration_list["duration"] = duration
+            duration_list["duration"] = int(duration)
             duration_list["present"] = present
             present = False
 
         starting_time = None
         sending_state = True
     
-    elif time.time()-last_detecting_time > 90 and present is False:
+    elif time.time()-last_detecting_time > 12 and present is False:
         duration_list["duration"] = 0
         duration_list["present"] = present
         sending_state = True
+        object_frame = new_frame
         last_detecting_time = time.time()
 
         
     if sending_state is True:
         print(duration_list)
-        cv2.imwrite("frame.jpg", frame)
-        upload(address, duration, "frame.jpg")
+        cv2.imwrite("frame.jpg", object_frame)
+        upload(address, duration_list, "frame.jpg")
         sending_state = False
         
-    cv2.imshow("Meow", frame)
+    cv2.imshow("Meow", new_frame)
     if cv2.waitKey(1) == ord("q"):
         break
 
