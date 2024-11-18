@@ -64,7 +64,7 @@ duration_list = {"Present": False,
 present = False
 sending_state = False
 address = "http://42.2.115.185:8080"
-video = cv2.VideoCapture(0)
+video = cv2.VideoCapture("cat.mp4")
 object_frame = None
 
 while True:
@@ -120,6 +120,7 @@ while True:
         
 
             
+
 
 
 
