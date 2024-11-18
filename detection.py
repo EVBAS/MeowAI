@@ -29,11 +29,11 @@ def upload(address,list,img_path):
     if response2:
         print(response2, response2.text)
 
-def predict(chosen_model, img, classes=[], conf=0.,verbose = True):
+def predict(chosen_model, img, classes=[], conf=0.,verbose = False):
     if classes:
         results = chosen_model.predict(img, classes=classes, conf=conf,verbose=verbose)
     else:
-        results = chosen_model.predict(img, conf=conf)
+        results = chosen_model.predict(img, conf=conf, verbose=verbose)
 
     return results
 
@@ -52,7 +52,7 @@ def predict_and_detect(chosen_model, img, classes=[], conf=0.8, counts = 0,verbo
                         
     return img, results, counts
 
-model = YOLO("yolov8l.pt")
+model = YOLO("Meow.pt")
 starting_time = None
 last_detecting_time = time.time()
 duration = None
@@ -72,14 +72,14 @@ while True:
     if not ret:
         break
 
-    new_frame, results, counts = predict_and_detect(model, frame, classes=[0], conf=0.6,verbose=False)
+    new_frame, results, counts = predict_and_detect(model, frame, classes=[], conf=0.6,verbose=False)
 
     if counts > 0:
         if present is False:
             starting_time = time.time()
             duration = None
             present = True
-            duration_list["present"] = present
+            duration_list["Present"] = present
             object_frame = new_frame
 
     elif present is True:
@@ -88,11 +88,11 @@ while True:
         if duration < 10:
             present = False
             duration_list["duration"] = 0
-            duration_list["present"] = present
+            duration_list["Present"] = present
             object_frame = new_frame
         else:
             duration_list["duration"] = int(duration)
-            duration_list["present"] = present
+            duration_list["Present"] = present
             present = False
 
         starting_time = None
@@ -100,10 +100,9 @@ while True:
     
     elif time.time()-last_detecting_time > 12 and present is False:
         duration_list["duration"] = 0
-        duration_list["present"] = present
+        duration_list["Present"] = present
         sending_state = True
         object_frame = new_frame
-        last_detecting_time = time.time()
 
         
     if sending_state is True:
@@ -111,6 +110,7 @@ while True:
         cv2.imwrite("frame.jpg", object_frame)
         upload(address, duration_list, "frame.jpg")
         sending_state = False
+        last_detecting_time = time.time()
         
     cv2.imshow("Meow", new_frame)
     if cv2.waitKey(1) == ord("q"):
