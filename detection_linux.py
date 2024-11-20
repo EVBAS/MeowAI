@@ -8,6 +8,7 @@ import adafruit_dht
 import time
 import board
 from gpiozero import DigitalInputDevice
+from gpiozero import LED
 
 def upload(address,list,img_path):
     headers = {'Content-Type': 'application/json'}
@@ -72,6 +73,12 @@ video = cv2.VideoCapture(0)
 object_frame = None
 dht11 = adafruit_dht.DHT11(board.D4)
 moisture_sensor = DigitalInputDevice(17)
+led_red = LED(14)
+led_green = LED(15)
+led_blue = LED(18)
+t = 0
+m = 0
+h = 0
 
 while True:
     ret, frame = video.read()
@@ -109,14 +116,33 @@ while True:
         duration_list["Present"] = present
         sending_state = True
         object_frame = new_frame
-    t = dht11.temperature
-    h = dht11.humidity
-    m = moisture_sensor.is_active
-    duration_list["wet area"] = m
-    duration_list["moisture"] = h
-    duration_list["temperature"] = t
+    try:
+        t = int(dht11.temperature)
+        if t.type is not int:
+            t = 0
+        h = dht11.humidity
+        m = moisture_sensor.is_active
+        duration_list["wet area"] = m
+        duration_list["moisture"] = h
+        duration_list["temperature"] = t
+    except:
+        pass
+    if t >20:
+        led_red.value = 255
+        print("too hot!")
+    else:
+        led_red.value = 0
 
-        
+    if m is True:
+        led_green.value = 255
+    else:
+        led_green.value = 0
+
+    if h > 80:
+        led_blue.value = 255
+    else:
+        led_blue.value = 0
+
     if sending_state is True:
         print(duration_list)
         cv2.imwrite("frame.jpg", object_frame)
