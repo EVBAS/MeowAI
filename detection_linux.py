@@ -9,6 +9,7 @@ import time
 import board
 from gpiozero import DigitalInputDevice
 from gpiozero import LED
+from picamera2 import Picamera2
 
 def upload(address,list,img_path):
     headers = {'Content-Type': 'application/json'}
@@ -43,19 +44,24 @@ def predict(chosen_model, img, classes=[], conf=0.,verbose = False):
     return results
 
 
-def predict_and_detect(chosen_model, img, classes=[], conf=0.8, counts = 0,verbose=True):
+def predict_and_detect(chosen_model, img, classes=[], conf=0.8, class_counts = {}, verbose=True):
     results = predict(chosen_model, img, classes, conf = conf,verbose = verbose)
 
     for result in results:
         for box in result.boxes:
+            
+            class_name = result.names[int(box.cls[0])]
+            if class_name in class_counts:
+                class_counts[class_name] += 1
+            else:
+                class_counts[class_name] = 1
             cv2.rectangle(img, (int(box.xyxy[0][0]), int(box.xyxy[0][1])),
                           (int(box.xyxy[0][2]), int(box.xyxy[0][3])), (255, 0, 0), 2)
             cv2.putText(img, f"{result.names[int(box.cls[0])]}",
                         (int(box.xyxy[0][0]), int(box.xyxy[0][1]) - 10),
                         cv2.FONT_HERSHEY_PLAIN, 1, (255, 0, 0), 1)
-            counts += 1
                         
-    return img, results, counts
+    return img, results, class_counts
 
 model = YOLO("Meow_ncnn_model")
 starting_time = None
@@ -69,9 +75,12 @@ duration_list = {"Present": False,
 present = False
 sending_state = False
 address = "http://42.2.115.185:8080"
-video = cv2.VideoCapture(0)
+picam2 = Picamera2()
+picam2.preview_configuration.main.size=(980,540) #full screen : 3280 2464
+picam2.preview_configuration.main.format = "RGB888" #8 bits
+picam2.start()
 object_frame = None
-dht11 = adafruit_dht.DHT11(board.D4)
+dht11 = adafruit_dht.DHT11(board.D3)
 moisture_sensor = DigitalInputDevice(17)
 led_red = LED(14)
 led_green = LED(15)
@@ -81,13 +90,11 @@ m = 0
 h = 0
 
 while True:
-    ret, frame = video.read()
-    if not ret:
-        break
+    frame = picam2.capture_array()
 
-    new_frame, results, counts = predict_and_detect(model, frame, classes=[], conf=0.6,verbose=False)
+    new_frame, results, class_counts = predict_and_detect(model, frame, classes=[], conf=0.6,verbose=False)
 
-    if counts > 0:
+    if class_counts["cat"] > 0:
         if present is False:
             starting_time = time.time()
             duration = None
@@ -133,12 +140,12 @@ while True:
     else:
         led_red.value = 0
 
-    if m is True:
+    if m is False:
         led_green.value = 255
     else:
         led_green.value = 0
 
-    if h > 80:
+    if h > -80:
         led_blue.value = 255
     else:
         led_blue.value = 0
@@ -153,3 +160,4 @@ while True:
     cv2.imshow("Meow", new_frame)
     if cv2.waitKey(1) == ord("q"):
         break
+picam2.stop()
