@@ -1,3 +1,3 @@
-# Meow-AI-maintain-system
-Meow-AL-maintain-system is the application for raspberry pi series devices to utilize the kernel of  Meow-AI. The control system consists of automatically moggy detection, affair notification system as well as  in-depth “MeowMeow” analytics. These are invented to assist pet trivia in hope of improving the experience users nurture the pet.
+# The Hardware of Meow-AI-maintain-system
+-- MeowAI-maintain-system is released two version catering to window and linux system. For window, you can directly operate the .py file (window version) to activate the system. For linux, you should follow the MeowAi_circuit.jpg to assemble the module of MeowAI system and follow the step aformentioned.
 
