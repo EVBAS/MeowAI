@@ -10,8 +10,21 @@ import board
 from gpiozero import DigitalInputDevice
 from gpiozero import LED
 from picamera2 import Picamera2
+def upload_img(address, img_path):
+    file_path = img_path
 
-def upload(address,list,img_path):
+    if os.path.exists(file_path):
+        with open(file_path, 'rb') as img_file:
+            response2 = requests.post(
+                f"{address}/upload-photo/1", 
+                files={'file': img_file})
+    else:
+        print(f"Error: File {file_path} does not exist.")
+        response2 = None
+    if response2:
+        print(response2, response2.text)
+
+def upload(address, list, img_path):
     headers = {'Content-Type': 'application/json'}
 
     response1 = requests.post(
@@ -46,22 +59,25 @@ def predict(chosen_model, img, classes=[], conf=0.,verbose = False):
 
 def predict_and_detect(chosen_model, img, classes=[], conf=0.8, class_counts = {"cat": 0, "pood": 0}, verbose=True):
     results = predict(chosen_model, img, classes, conf = conf,verbose = verbose)
-
+    cropped_imgs = []
+    cropped_img_names = []
     for result in results:
         for box in result.boxes:
             
             class_name = result.names[int(box.cls[0])]
+            cropped_img_names.append(class_name)
             if class_name in class_counts:
                 class_counts[class_name] += 1
-            else:
-                class_counts[class_name] = 1
+            cropped_img = img[int(box.xyxy[0][1]):int(box.xyxy[0][3]),
+                               int(box.xyxy[0][0]):int(box.xyxy[0][2])]
+            cropped_imgs.append(cropped_img)
             cv2.rectangle(img, (int(box.xyxy[0][0]), int(box.xyxy[0][1])),
                           (int(box.xyxy[0][2]), int(box.xyxy[0][3])), (255, 0, 0), 2)
             cv2.putText(img, f"{result.names[int(box.cls[0])]}",
                         (int(box.xyxy[0][0]), int(box.xyxy[0][1]) - 10),
                         cv2.FONT_HERSHEY_PLAIN, 1, (255, 0, 0), 1)
                         
-    return img, results, class_counts
+    return img, results, class_counts, cropped_imgs, cropped_img_names
 
 model = YOLO("MeowAI_ncnn_model")
 starting_time = None
@@ -92,7 +108,7 @@ h = 0
 while True:
     frame = picam2.capture_array()
 
-    new_frame, results, class_counts = predict_and_detect(model, frame, classes=[], conf=0.55, verbose=False, class_counts = {"cat": 0, "poop": 0})
+    new_frame, results, class_counts, cropped_imgs, cropped_imgs_names = predict_and_detect(model, frame, classes=[], conf=0.55, verbose=False, class_counts = {"cat": 0, "poop": 0})
 
     if class_counts["cat"] > 0:
         print(class_counts["cat"])
@@ -155,7 +171,13 @@ while True:
         led_blue.value = 0
 
     if sending_state is True:
-        print(duration_list)
+        print(duration_list, class_counts)
+        if len(cropped_imgs)>0:
+            for i in range(0,len(cropped_imgs)):
+                if cropped_imgs_names[i] == "poop":
+                    name = "feace.jpg"
+                    cv2.imwrite(name, cropped_imgs[i])
+                    upload_img(address,name)
         cv2.imwrite("frame.jpg", object_frame)
         upload(address, duration_list, "frame.jpg")
         sending_state = False
