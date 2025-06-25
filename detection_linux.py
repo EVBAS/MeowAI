@@ -79,7 +79,7 @@ def predict_and_detect(chosen_model, img, classes=[], conf=0.8, class_counts = {
                         
     return img, results, class_counts, cropped_imgs, cropped_img_names
 
-model = YOLO("MeowAI_ncnn_model")
+model = YOLO("MeowAI_2_ncnn_model")
 starting_time = None
 last_detecting_time = time.time()
 duration = None
@@ -91,9 +91,8 @@ duration_list = {"Present": False,
                  "no. of faeces": 0}
 present = False
 sending_state = False
-address = "http://172.19.12.75:8080/"
 picam2 = Picamera2()
-picam2.preview_configuration.main.size=(980,540) #full screen : 3280 2464
+picam2.preview_configuration.main.size=(1240,780) #full screen : 3280 2464
 picam2.preview_configuration.main.format = "RGB888" #8 bits
 picam2.start()
 object_frame = None
@@ -105,6 +104,11 @@ led_blue = LED(16)
 t = 0
 m = 0
 h = 0
+#var. can be edited
+address = "http://192.168.194.108:8080"
+refresh_time = 60
+###################
+
 while True:
     frame = picam2.capture_array()
 
@@ -135,7 +139,7 @@ while True:
         starting_time = None
         sending_state = True
     
-    elif time.time()-last_detecting_time > 12 and present is False:
+    elif time.time()-last_detecting_time > refresh_time and present is False:
         duration_list["duration"] = 0
         duration_list["Present"] = present
         sending_state = True
@@ -156,7 +160,7 @@ while True:
         pass
     if t > 28:
         led_red.value = 255
-        print("too hot!")
+        # print("too hot!")
     else:
         led_red.value = 0
 
@@ -171,7 +175,7 @@ while True:
         led_blue.value = 0
 
     if sending_state is True:
-        print(duration_list, class_counts)
+        print(duration_list)
         if len(cropped_imgs)>0:
             for i in range(0,len(cropped_imgs)):
                 if cropped_imgs_names[i] == "poop":
